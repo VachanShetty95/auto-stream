@@ -5,7 +5,7 @@ on:
     branches: [ main, github-actions-build ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
   release:
     types: [created]
 
@@ -18,9 +18,11 @@ jobs:
           - os: windows-latest
             executable_name: auto-stream.exe
             artifact_name: auto-stream-windows
+            path_separator: ";"
           - os: ubuntu-latest  
             executable_name: auto-stream
             artifact_name: auto-stream-linux
+            path_separator: ":"
     
     runs-on: ${{ matrix.os }}
     
@@ -40,7 +42,7 @@ jobs:
     
     - name: Build executable
       run: |
-        pyinstaller --onefile --console --name auto-stream --add-data "src${{ matrix.os == 'windows-latest' && ';' || ':' }}src" --hidden-import psutil --hidden-import requests --hidden-import discord --hidden-import dotenv main.py
+        pyinstaller --onefile --console --name auto-stream --add-data "src${{ matrix.path_separator }}src" --hidden-import psutil --hidden-import requests --hidden-import discord --hidden-import dotenv main.py
     
     - name: Create distribution package
       shell: bash
@@ -51,39 +53,32 @@ jobs:
         cp README.md package/
         cp LICENSE package/
         
-        # Create platform-specific setup instructions
         if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          echo "# Auto-Stream Windows Executable
-
-## Quick Start
-1. Copy .env.example to .env
-2. Edit .env with your settings:
-   - YOUTUBE_STREAM_KEY=your_key_here
-   - GAME_EXECUTABLE=YourGame.exe  
-3. Double-click auto-stream.exe
-
-## Requirements
-- FFmpeg installed and in PATH
-- YouTube streaming enabled on your channel
-
-Built from: ${{ github.sha }}
-" > package/SETUP.txt
+          echo "Auto-Stream Windows Executable" > package/SETUP.txt
+          echo "" >> package/SETUP.txt
+          echo "Quick Start:" >> package/SETUP.txt
+          echo "1. Copy .env.example to .env" >> package/SETUP.txt
+          echo "2. Edit .env with your settings:" >> package/SETUP.txt
+          echo "   - YOUTUBE_STREAM_KEY=your_key_here" >> package/SETUP.txt
+          echo "   - GAME_EXECUTABLE=YourGame.exe" >> package/SETUP.txt
+          echo "3. Double-click auto-stream.exe" >> package/SETUP.txt
+          echo "" >> package/SETUP.txt
+          echo "Requirements:" >> package/SETUP.txt
+          echo "- FFmpeg installed and in PATH" >> package/SETUP.txt
+          echo "- YouTube streaming enabled on your channel" >> package/SETUP.txt
         else
-          echo "# Auto-Stream Linux Executable
-
-## Quick Start  
-1. Copy .env.example to .env
-2. Edit .env with your settings:
-   - YOUTUBE_STREAM_KEY=your_key_here
-   - GAME_EXECUTABLE=your_game_binary
-3. Run ./auto-stream
-
-## Requirements
-- FFmpeg installed
-- Make executable: chmod +x auto-stream
-
-Built from: ${{ github.sha }}
-" > package/SETUP.txt
+          echo "Auto-Stream Linux Executable" > package/SETUP.txt
+          echo "" >> package/SETUP.txt
+          echo "Quick Start:" >> package/SETUP.txt
+          echo "1. Copy .env.example to .env" >> package/SETUP.txt
+          echo "2. Edit .env with your settings:" >> package/SETUP.txt
+          echo "   - YOUTUBE_STREAM_KEY=your_key_here" >> package/SETUP.txt
+          echo "   - GAME_EXECUTABLE=your_game_binary" >> package/SETUP.txt
+          echo "3. Run ./auto-stream" >> package/SETUP.txt
+          echo "" >> package/SETUP.txt
+          echo "Requirements:" >> package/SETUP.txt
+          echo "- FFmpeg installed" >> package/SETUP.txt
+          echo "- Make executable: chmod +x auto-stream" >> package/SETUP.txt
         fi
     
     - name: Upload artifact
