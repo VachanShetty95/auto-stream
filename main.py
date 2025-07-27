@@ -21,7 +21,7 @@ from src.config import EnvConfig
 
 def signal_handler(signum, frame):
     """Handle shutdown signals gracefully."""
-    print("\n🛑 Shutting down Auto-Stream...")
+    print("\nShutting down Auto-Stream...")
     if 'service' in globals():
         service.stop_service()
     sys.exit(0)
@@ -35,14 +35,14 @@ def main():
     parser.add_argument('--key', type=str, help='Override YouTube stream key')
     args = parser.parse_args()
     
-    print("🎮 Auto-Stream v2.0 - CLI Edition")
+    print("Auto-Stream v2.0 - CLI Edition")
     print("=" * 40)
     
     # Load environment variables
     env_path = Path('.env')
     if not env_path.exists():
-        print("❌ No .env file found!")
-        print("📝 Copy .env.example to .env and configure your settings")
+        print("No .env file found!")
+        print("Copy .env.example to .env and configure your settings")
         return 1
     
     load_dotenv(env_path)
@@ -58,51 +58,51 @@ def main():
         # Apply CLI overrides
         if args.game:
             config.game_executable = args.game
-            print(f"🎮 Override: Game = {args.game}")
+            print(f"Override: Game = {args.game}")
         
         if args.key:
             config.youtube_stream_key = args.key
-            print(f"🔑 Override: Stream key = {args.key[:8]}...")
+            print(f"Override: Stream key = {args.key[:8]}...")
         
         # Validate configuration
         errors = config.validate()
         if errors:
-            print("❌ Configuration errors:")
+            print("Configuration errors:")
             for error in errors:
                 print(f"   • {error}")
             return 1
         
-        print("✅ Configuration loaded successfully")
-        print(f"🎮 Game: {config.game_executable}")
-        print(f"📺 Platform: YouTube")
-        print(f"🎥 Quality: {config.stream_quality}")
+        print("Configuration loaded successfully")
+        print(f"Game: {config.game_executable}")
+        print(f"Platform: YouTube")
+        print(f"Quality: {config.stream_quality}")
         
         # Initialize and start service
         global service
         service = StreamService(config)
         
         if args.test:
-            print("\n🧪 Running in test mode (30 seconds)...")
+            print("\nRunning in test mode (30 seconds)...")
             service.start_service()
             
             if service.is_running:
-                print("✅ Service started - monitoring for 30 seconds...")
+                print("Service started - monitoring for 30 seconds...")
                 time.sleep(30)
                 service.stop_service()
-                print("✅ Test completed!")
+                print("Test completed!")
             else:
-                print("❌ Service failed to start")
+                print("Service failed to start")
                 return 1
         else:
-            print("\n🚀 Starting Auto-Stream service...")
+            print("\nStarting Auto-Stream service...")
             service.start_service()
             
             if not service.is_running:
-                print("❌ Failed to start service")
+                print("Failed to start service")
                 return 1
             
-            print("✅ Service running! Press Ctrl+C to stop.")
-            print(f"🔍 Monitoring for '{config.game_executable}' every {config.check_interval}s")
+            print("Service running! Press Ctrl+C to stop.")
+            print(f"Monitoring for '{config.game_executable}' every {config.check_interval}s")
             
             # Keep running until interrupted
             try:
@@ -114,7 +114,7 @@ def main():
         return 0
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         return 1
     
     finally:

@@ -45,7 +45,7 @@ class StreamService:
     
     def _on_game_started(self, game_name: str, game_info: Dict):
         """Handle game started event."""
-        print(f"🎮 Game detected: {game_name}")
+        print(f"Game detected: {game_name}")
         
         if not self.config.auto_start:
             print("Auto-start disabled")
@@ -58,13 +58,13 @@ class StreamService:
         # Start streaming
         success = self.start_stream(game_name)
         if success:
-            print(f"✅ Started streaming {game_name}")
+            print(f"Started streaming {game_name}")
         else:
-            print(f"❌ Failed to start stream")
+            print(f"Failed to start stream")
     
     def _on_game_stopped(self, game_name: str):
         """Handle game stopped event."""
-        print(f"🛑 Game stopped: {game_name}")
+        print(f"Game stopped: {game_name}")
         
         if self.current_stream:
             self.stop_stream()
@@ -85,7 +85,7 @@ class StreamService:
                 bitrate=self.config.stream_bitrate
             )
             
-            print(f"📡 Starting stream...")
+            print(f"Starting stream...")
             
             # Start FFmpeg process
             process = subprocess.Popen(
@@ -112,7 +112,7 @@ class StreamService:
             return True
             
         except Exception as e:
-            print(f"❌ Stream error: {e}")
+            print(f"Stream error: {e}")
             return False
     
     def stop_stream(self) -> bool:
@@ -145,12 +145,12 @@ class StreamService:
                     duration=duration_str
                 )
             
-            print(f"⏹️ Stream stopped (Duration: {duration_str})")
+            print(f"Stream stopped (Duration: {duration_str})")
             self.current_stream = None
             return True
             
         except Exception as e:
-            print(f"❌ Stop error: {e}")
+            print(f"Stop error: {e}")
             return False
     
     def _format_duration(self, duration: timedelta) -> str:
@@ -172,12 +172,12 @@ class StreamService:
         if self.is_running:
             return
         
-        print("🚀 Starting Auto-Stream...")
+        print("Starting Auto-Stream...")
         
         # Validate configuration
         errors = self.config.validate()
         if errors:
-            print("❌ Configuration errors:")
+            print("Configuration errors:")
             for error in errors:
                 print(f"   • {error}")
             return
@@ -185,9 +185,9 @@ class StreamService:
         # Ensure FFmpeg is available
         try:
             ffmpeg_path = self.ffmpeg_manager.ensure_ffmpeg()
-            print(f"✅ FFmpeg: {ffmpeg_path}")
+            print(f"FFmpeg: {ffmpeg_path}")
         except Exception as e:
-            print(f"❌ FFmpeg error: {e}")
+            print(f"FFmpeg error: {e}")
             return
         
         # Start Discord bot if configured
@@ -199,14 +199,14 @@ class StreamService:
         self.game_detector.start_monitoring()
         self.is_running = True
         
-        print(f"✅ Monitoring '{self.config.game_executable}'")
+        print(f"Monitoring '{self.config.game_executable}'")
     
     def stop_service(self):
         """Stop the streaming service."""
         if not self.is_running:
             return
         
-        print("🛑 Stopping service...")
+        print("Stopping service...")
         
         # Stop active stream
         if self.current_stream:
@@ -220,4 +220,4 @@ class StreamService:
             self.discord_notifier.stop_bot()
         
         self.is_running = False
-        print("✅ Service stopped") 
+        print("Service stopped") 

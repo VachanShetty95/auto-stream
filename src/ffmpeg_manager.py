@@ -190,28 +190,19 @@ Or download from: https://ffmpeg.org/download.html
             settings["bitrate"] = bitrate
         
         # Base command
-        cmd = [
-            ffmpeg_path,
-            "-y",  # Overwrite output files
-            "-loglevel", "warning"  # Reduce log verbosity
-        ]
+        cmd = [ffmpeg_path]
         
         # Input settings (platform-specific)
         if platform.system() == "Windows":
-            if game_title:
-                # Capture specific window
-                cmd.extend([
-                    "-f", "gdigrab",
-                    "-framerate", str(framerate),
-                    "-i", f"title={game_title}"
-                ])
-            else:
-                # Capture desktop
-                cmd.extend([
-                    "-f", "gdigrab",
-                    "-framerate", str(framerate),
-                    "-i", "desktop"
-                ])
+            # Use the working command structure
+            cmd.extend([
+                "-f", "gdigrab",
+                "-framerate", str(framerate),
+                "-video_size", f"{settings['width']}x{settings['height']}",
+                "-i", "desktop",
+                "-f", "dshow",
+                "-i", "audio=\"Stereo Mix (Realtek(R) Audio)\""
+            ])
         else:
             # Linux - detect display server and use appropriate capture
             import os
@@ -220,8 +211,8 @@ Or download from: https://ffmpeg.org/download.html
             
             # If we have a DISPLAY variable, prefer X11 capture even if session type says wayland
             if display and session_type == 'wayland':
-                print(f"🔄 Detected mixed environment: session={session_type}, display={display}")
-                print("🎯 Using X11 capture since DISPLAY is available")
+                print(f"Detected mixed environment: session={session_type}, display={display}")
+                print("Using X11 capture since DISPLAY is available")
                 # Use X11 capture
                 cmd.extend([
                     "-f", "x11grab",
@@ -243,7 +234,7 @@ Or download from: https://ffmpeg.org/download.html
                         ])
                     else:
                         # Fallback to test pattern with warning
-                        print("⚠️  Wayland screen capture not available, using test pattern")
+                        print("Wayland screen capture not available, using test pattern")
                         cmd.extend([
                             "-f", "lavfi",
                             "-i", "testsrc2=size=1280x720:rate=30",
@@ -252,7 +243,7 @@ Or download from: https://ffmpeg.org/download.html
                         ])
                 except:
                     # Fallback to test pattern
-                    print("⚠️  Screen capture failed, using test pattern")
+                    print("Screen capture failed, using test pattern")
                     cmd.extend([
                         "-f", "lavfi",
                         "-i", "testsrc2=size=1280x720:rate=30",
@@ -268,26 +259,21 @@ Or download from: https://ffmpeg.org/download.html
                     "-i", display
                 ])
         
-        # Video encoding settings
+        # Video encoding settings (using the working command structure)
         cmd.extend([
             "-c:v", "libx264",
             "-preset", "veryfast",
-            "-tune", "zerolatency",
             "-pix_fmt", "yuv420p",
-            "-s", f"{settings['width']}x{settings['height']}",
-            "-r", str(framerate),
-            "-maxrate", settings["bitrate"],
-            "-bufsize", str(int(settings["bitrate"].rstrip('k')) * 2) + "k",
-            "-g", str(framerate * 2),  # Keyframe interval
+            "-g", "60",
+            "-keyint_min", "60"
         ])
         
-        # Audio settings (if available)
+        # Audio settings (using the working command structure)
         if platform.system() == "Windows":
             cmd.extend([
-                "-f", "dshow",
-                "-i", "audio=Stereo Mix",  # This might need adjustment
                 "-c:a", "aac",
-                "-b:a", "128k"
+                "-b:a", "128k",
+                "-ar", "44100"
             ])
         
         # Output settings

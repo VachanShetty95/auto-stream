@@ -134,13 +134,13 @@ class DiscordNotifier:
                 stream_url=stream_url
             )
         else:
-            message = f"🎮 **{game_name}** stream is now live!"
+            message = f"**{game_name}** stream is now live!"
             if stream_url:
-                message += f"\n🔗 {stream_url}"
+                message += f"\n{stream_url}"
         
         # Create embed for richer notification
         embed = discord.Embed(
-            title="🔴 Stream Started",
+            title="Stream Started",
             description=f"Now streaming **{game_name}**",
             color=0x00ff00  # Green
         )
@@ -159,13 +159,13 @@ class DiscordNotifier:
     def notify_stream_stopped(self, game_name: str, duration: str = "") -> bool:
         """Send notification when stream stops."""
         
-        message = f"⏹️ **{game_name}** stream has ended."
+        message = f"**{game_name}** stream has ended."
         if duration:
-            message += f"\n⏱️ Duration: {duration}"
+            message += f"\nDuration: {duration}"
         
         # Create embed
         embed = discord.Embed(
-            title="⏹️ Stream Ended",
+            title="Stream Ended",
             description=f"**{game_name}** stream has stopped",
             color=0xff0000  # Red
         )
@@ -182,7 +182,7 @@ class DiscordNotifier:
         if not self.is_connected:
             return False
         
-        test_message = "🧪 Auto-Stream bot test message"
+        test_message = "Auto-Stream bot test message"
         return self.send_message_sync(test_message)
     
     def get_channel_info(self) -> Optional[Dict[str, Any]]:
