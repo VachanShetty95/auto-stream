@@ -14,7 +14,7 @@ class EnvConfig:
         self.youtube_stream_key = os.getenv('YOUTUBE_STREAM_KEY', '')
         self.youtube_stream_url = os.getenv('YOUTUBE_STREAM_URL', 'rtmp://a.rtmp.youtube.com/live2')
         
-        # Game detection
+        # Game detection (optional - can be empty for desktop-only streaming)
         self.game_executable = os.getenv('GAME_EXECUTABLE', '')
         self.check_interval = int(os.getenv('CHECK_INTERVAL', '10'))
         
@@ -26,7 +26,7 @@ class EnvConfig:
         # Discord (optional)
         self.discord_bot_token = os.getenv('DISCORD_BOT_TOKEN', '')
         self.discord_channel_id = os.getenv('DISCORD_CHANNEL_ID', '')
-        self.discord_message = os.getenv('DISCORD_MESSAGE', '🎮 {game_name} stream is now live!')
+        self.discord_message = os.getenv('DISCORD_MESSAGE', '{game_name} stream is now live!')
         
         # System
         self.ffmpeg_path = os.getenv('FFMPEG_PATH', '')
@@ -42,8 +42,9 @@ class EnvConfig:
         if not self.youtube_stream_url.strip():
             errors.append("YOUTUBE_STREAM_URL is required")
         
-        if not self.game_executable.strip():
-            errors.append("GAME_EXECUTABLE is required")
+        # GAME_EXECUTABLE is now optional - can be empty for desktop-only streaming
+        # if not self.game_executable.strip():
+        #     errors.append("GAME_EXECUTABLE is required")
         
         if self.check_interval < 1:
             errors.append("CHECK_INTERVAL must be at least 1 second")

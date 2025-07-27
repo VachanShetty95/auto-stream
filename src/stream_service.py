@@ -23,7 +23,9 @@ class StreamService:
         self.logger = AutoStreamLogger()
         
         # Initialize components
-        self.game_detector = GameDetector([config.game_executable], config.check_interval)
+        # Handle case where no game executable is configured (desktop-only mode)
+        game_executables = [config.game_executable] if config.game_executable.strip() else []
+        self.game_detector = GameDetector(game_executables, config.check_interval)
         self.ffmpeg_manager = FFmpegManager()
         
         # Discord notifier (optional)
@@ -246,12 +248,26 @@ class StreamService:
             self.discord_notifier.start_bot()
             time.sleep(1)
         
-        # Start game monitoring
-        self.logger.info(f"Starting game monitoring for: {self.config.game_executable}")
-        self.game_detector.start_monitoring()
-        self.is_running = True
-        
-        print(f"Monitoring '{self.config.game_executable}'")
+        # Check if we're in desktop-only mode (no game executable configured)
+        if not self.config.game_executable.strip():
+            self.logger.info("No game executable configured - starting desktop-only streaming")
+            print("No game executable configured - starting desktop-only streaming")
+            
+            # Start streaming immediately for desktop-only mode
+            success = self.start_stream("Desktop")
+            if success:
+                self.is_running = True
+                print("Desktop streaming started successfully!")
+            else:
+                self.logger.error("Failed to start desktop streaming")
+                print("Failed to start desktop streaming")
+                return
+        else:
+            # Start game monitoring
+            self.logger.info(f"Starting game monitoring for: {self.config.game_executable}")
+            self.game_detector.start_monitoring()
+            self.is_running = True
+            print(f"Monitoring '{self.config.game_executable}'")
     
     def stop_service(self):
         """Stop the streaming service."""

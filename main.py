@@ -84,7 +84,13 @@ def main():
         
         logger.info("Configuration loaded successfully")
         print("Configuration loaded successfully")
-        print(f"Game: {config.game_executable}")
+        
+        # Show configuration details
+        if config.game_executable.strip():
+            print(f"Game: {config.game_executable}")
+        else:
+            print("Game: Desktop-only mode (no game executable configured)")
+        
         print(f"Platform: YouTube")
         print(f"Quality: {config.stream_quality}")
         
@@ -120,7 +126,11 @@ def main():
             
             logger.info("Service running successfully")
             print("Service running! Press Ctrl+C to stop.")
-            print(f"Monitoring for '{config.game_executable}' every {config.check_interval}s")
+            
+            if config.game_executable.strip():
+                print(f"Monitoring for '{config.game_executable}' every {config.check_interval}s")
+            else:
+                print("Desktop streaming active - no game monitoring")
             
             # Keep running until interrupted
             try:
