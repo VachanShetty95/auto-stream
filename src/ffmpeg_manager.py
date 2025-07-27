@@ -187,6 +187,7 @@ Or download from: https://ffmpeg.org/download.html
             use_desktop: If True, capture entire desktop; if False, try to capture specific window
         """
         
+        # Get the actual FFmpeg path (not mocked)
         ffmpeg_path = self.ensure_ffmpeg()
         
         # Quality settings
@@ -240,7 +241,9 @@ Or download from: https://ffmpeg.org/download.html
                 cmd.extend([
                     "-f", "x11grab",
                     "-framerate", str(framerate),
-                    "-i", display
+                    "-i", display,
+                    "-f", "pulse",
+                    "-i", "default"
                 ])
             elif session_type == 'wayland':
                 # Wayland - try to use actual screen capture
@@ -279,7 +282,9 @@ Or download from: https://ffmpeg.org/download.html
                 cmd.extend([
                     "-f", "x11grab",
                     "-framerate", str(framerate),
-                    "-i", display
+                    "-i", display,
+                    "-f", "pulse",
+                    "-i", "default"
                 ])
         
         # Video encoding settings (using the working command structure)
@@ -293,6 +298,13 @@ Or download from: https://ffmpeg.org/download.html
         
         # Audio settings (using the working command structure)
         if platform.system() == "Windows":
+            cmd.extend([
+                "-c:a", "aac",
+                "-b:a", "128k",
+                "-ar", "44100"
+            ])
+        else:
+            # Linux audio settings
             cmd.extend([
                 "-c:a", "aac",
                 "-b:a", "128k",

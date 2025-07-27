@@ -121,12 +121,39 @@ class StreamService:
             self.logger.info(f"Starting stream with {'desktop' if use_desktop else 'game-specific'} capture")
             
             # Start FFmpeg process
+            self.logger.info(f"Starting FFmpeg process with command: {' '.join(stream_cmd)}")
+            
             process = subprocess.Popen(
                 stream_cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True
             )
+            
+            # Check if process started successfully
+            if process.poll() is not None:
+                # Process terminated immediately
+                stdout, stderr = process.communicate()
+                self.logger.error(f"FFmpeg process failed to start. Return code: {process.returncode}")
+                self.logger.error(f"FFmpeg stdout: {stdout}")
+                self.logger.error(f"FFmpeg stderr: {stderr}")
+                print(f"FFmpeg failed to start. Check logs for details.")
+                return False
+            
+            # Wait a moment to see if process starts successfully
+            import time
+            time.sleep(2)
+            
+            if process.poll() is not None:
+                # Process terminated after a short time
+                stdout, stderr = process.communicate()
+                self.logger.error(f"FFmpeg process terminated. Return code: {process.returncode}")
+                self.logger.error(f"FFmpeg stdout: {stdout}")
+                self.logger.error(f"FFmpeg stderr: {stderr}")
+                print(f"FFmpeg process terminated. Check logs for details.")
+                return False
+            
+            self.logger.info(f"FFmpeg process started successfully (PID: {process.pid})")
             
             # Store stream info
             self.current_stream = {
@@ -268,6 +295,24 @@ class StreamService:
             self.game_detector.start_monitoring()
             self.is_running = True
             print(f"Monitoring '{self.config.game_executable}'")
+    
+    def check_stream_health(self) -> bool:
+        """Check if the current stream is healthy."""
+        if not self.current_stream:
+            return False
+        
+        process = self.current_stream['process']
+        
+        # Check if process is still running
+        if process.poll() is not None:
+            # Process has terminated
+            stdout, stderr = process.communicate()
+            self.logger.error(f"FFmpeg process terminated unexpectedly. Return code: {process.returncode}")
+            self.logger.error(f"FFmpeg stdout: {stdout}")
+            self.logger.error(f"FFmpeg stderr: {stderr}")
+            return False
+        
+        return True
     
     def stop_service(self):
         """Stop the streaming service."""
