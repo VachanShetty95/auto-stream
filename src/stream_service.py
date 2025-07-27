@@ -10,6 +10,7 @@ from typing import Optional, Dict, Any
 from .game_detector import GameDetector
 from .ffmpeg_manager import FFmpegManager
 from .discord_notifier import DiscordNotifier
+from .logger import AutoStreamLogger
 
 
 class StreamService:
@@ -17,6 +18,9 @@ class StreamService:
     
     def __init__(self, config):
         self.config = config
+        
+        # Initialize logger
+        self.logger = AutoStreamLogger()
         
         # Initialize components
         self.game_detector = GameDetector([config.game_executable], config.check_interval)
@@ -45,25 +49,31 @@ class StreamService:
     
     def _on_game_started(self, game_name: str, game_info: Dict):
         """Handle game started event."""
+        self.logger.log_game_detected(game_name)
         print(f"Game detected: {game_name}")
         
         if not self.config.auto_start:
+            self.logger.info("Auto-start disabled")
             print("Auto-start disabled")
             return
         
         if self.current_stream:
+            self.logger.info("Already streaming, skipping new stream")
             print(f"Already streaming")
             return
         
         # Start streaming
         success = self.start_stream(game_name)
         if success:
+            self.logger.info(f"Started streaming {game_name}")
             print(f"Started streaming {game_name}")
         else:
+            self.logger.error(f"Failed to start stream for {game_name}")
             print(f"Failed to start stream")
     
     def _on_game_stopped(self, game_name: str):
         """Handle game stopped event."""
+        self.logger.log_game_stopped(game_name)
         print(f"Game stopped: {game_name}")
         
         if self.current_stream:
@@ -75,17 +85,38 @@ class StreamService:
             # Get quality settings
             quality_settings = self.config.get_quality_settings()
             
+            # Determine if we should use desktop capture or game-specific capture
+            use_desktop = True  # Default to desktop capture
+            game_title = None
+            
+            # If game_executable is set and not empty, try game-specific capture
+            if self.config.game_executable and self.config.game_executable.strip():
+                # Check if the game is actually running
+                if self.game_detector.is_game_running(self.config.game_executable):
+                    game_title = game_name
+                    use_desktop = False  # Try game-specific capture
+                    self.logger.info(f"Using game-specific capture for: {game_name}")
+                else:
+                    self.logger.info(f"Game {self.config.game_executable} not running, using desktop capture")
+            else:
+                self.logger.info("No game executable configured, using desktop capture")
+            
             # Generate FFmpeg command
             stream_cmd = self.ffmpeg_manager.generate_stream_command(
                 stream_url=self.config.youtube_stream_url,
                 stream_key=self.config.youtube_stream_key,
-                game_title=game_name,
+                game_title=game_title,
                 quality=self.config.stream_quality,
                 framerate=self.config.stream_framerate,
-                bitrate=self.config.stream_bitrate
+                bitrate=self.config.stream_bitrate,
+                use_desktop=use_desktop
             )
             
+            # Log the FFmpeg command
+            self.logger.log_ffmpeg_command(stream_cmd)
+            
             print(f"Starting stream...")
+            self.logger.info(f"Starting stream with {'desktop' if use_desktop else 'game-specific'} capture")
             
             # Start FFmpeg process
             process = subprocess.Popen(
@@ -99,8 +130,13 @@ class StreamService:
             self.current_stream = {
                 'process': process,
                 'start_time': datetime.now(),
-                'game_name': game_name
+                'game_name': game_name,
+                'capture_type': 'desktop' if use_desktop else 'game-specific'
             }
+            
+            # Log stream start
+            stream_url = f"{self.config.youtube_stream_url}/{self.config.youtube_stream_key}"
+            self.logger.log_stream_start(game_name, stream_url)
             
             # Send Discord notification
             if self.discord_notifier:
@@ -112,6 +148,7 @@ class StreamService:
             return True
             
         except Exception as e:
+            self.logger.log_error(e, "start_stream")
             print(f"Stream error: {e}")
             return False
     
@@ -124,19 +161,27 @@ class StreamService:
             process = self.current_stream['process']
             start_time = self.current_stream['start_time']
             game_name = self.current_stream['game_name']
+            capture_type = self.current_stream.get('capture_type', 'unknown')
+            
+            self.logger.info(f"Stopping stream for {game_name} (capture: {capture_type})")
             
             # Terminate FFmpeg
             process.terminate()
             
             try:
                 process.wait(timeout=5)
+                self.logger.info("FFmpeg process terminated successfully")
             except subprocess.TimeoutExpired:
+                self.logger.warning("FFmpeg process did not terminate, forcing kill")
                 process.kill()
                 process.wait()
             
             # Calculate duration
             duration = datetime.now() - start_time
             duration_str = self._format_duration(duration)
+            
+            # Log stream stop
+            self.logger.log_stream_stop(game_name, duration_str)
             
             # Send Discord notification
             if self.discord_notifier:
@@ -150,6 +195,7 @@ class StreamService:
             return True
             
         except Exception as e:
+            self.logger.log_error(e, "stop_stream")
             print(f"Stop error: {e}")
             return False
     
@@ -172,11 +218,13 @@ class StreamService:
         if self.is_running:
             return
         
+        self.logger.info("Starting Auto-Stream service")
         print("Starting Auto-Stream...")
         
         # Validate configuration
         errors = self.config.validate()
         if errors:
+            self.logger.error(f"Configuration errors: {errors}")
             print("Configuration errors:")
             for error in errors:
                 print(f"   • {error}")
@@ -185,17 +233,21 @@ class StreamService:
         # Ensure FFmpeg is available
         try:
             ffmpeg_path = self.ffmpeg_manager.ensure_ffmpeg()
+            self.logger.info(f"FFmpeg found at: {ffmpeg_path}")
             print(f"FFmpeg: {ffmpeg_path}")
         except Exception as e:
+            self.logger.log_error(e, "FFmpeg initialization")
             print(f"FFmpeg error: {e}")
             return
         
         # Start Discord bot if configured
         if self.discord_notifier:
+            self.logger.info("Starting Discord bot")
             self.discord_notifier.start_bot()
             time.sleep(1)
         
         # Start game monitoring
+        self.logger.info(f"Starting game monitoring for: {self.config.game_executable}")
         self.game_detector.start_monitoring()
         self.is_running = True
         
@@ -206,6 +258,7 @@ class StreamService:
         if not self.is_running:
             return
         
+        self.logger.info("Stopping Auto-Stream service")
         print("Stopping service...")
         
         # Stop active stream
@@ -213,11 +266,14 @@ class StreamService:
             self.stop_stream()
         
         # Stop game monitoring
+        self.logger.info("Stopping game monitoring")
         self.game_detector.stop_monitoring()
         
         # Stop Discord bot
         if self.discord_notifier:
+            self.logger.info("Stopping Discord bot")
             self.discord_notifier.stop_bot()
         
         self.is_running = False
+        self.logger.info("Auto-Stream service stopped")
         print("Service stopped") 

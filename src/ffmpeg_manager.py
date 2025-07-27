@@ -172,9 +172,20 @@ Or download from: https://ffmpeg.org/download.html
         game_title: Optional[str] = None,
         quality: str = "720p",
         framerate: int = 30,
-        bitrate: str = "3000k"
+        bitrate: str = "3000k",
+        use_desktop: bool = True
     ) -> List[str]:
-        """Generate FFmpeg command for streaming."""
+        """Generate FFmpeg command for streaming.
+        
+        Args:
+            stream_url: RTMP stream URL
+            stream_key: Stream key for authentication
+            game_title: Optional game window title (not used when use_desktop=True)
+            quality: Stream quality (480p, 720p, 1080p)
+            framerate: Video framerate
+            bitrate: Video bitrate
+            use_desktop: If True, capture entire desktop; if False, try to capture specific window
+        """
         
         ffmpeg_path = self.ensure_ffmpeg()
         
@@ -195,14 +206,26 @@ Or download from: https://ffmpeg.org/download.html
         # Input settings (platform-specific)
         if platform.system() == "Windows":
             # Use the working command structure
-            cmd.extend([
-                "-f", "gdigrab",
-                "-framerate", str(framerate),
-                "-video_size", f"{settings['width']}x{settings['height']}",
-                "-i", "desktop",
-                "-f", "dshow",
-                "-i", "audio=\"Stereo Mix (Realtek(R) Audio)\""
-            ])
+            if use_desktop or not game_title:
+                # Desktop capture (default and most reliable)
+                cmd.extend([
+                    "-f", "gdigrab",
+                    "-framerate", str(framerate),
+                    "-video_size", f"{settings['width']}x{settings['height']}",
+                    "-i", "desktop",
+                    "-f", "dshow",
+                    "-i", "audio=\"Stereo Mix (Realtek(R) Audio)\""
+                ])
+            else:
+                # Window-specific capture (less reliable)
+                cmd.extend([
+                    "-f", "gdigrab",
+                    "-framerate", str(framerate),
+                    "-video_size", f"{settings['width']}x{settings['height']}",
+                    "-i", f"title={game_title}",
+                    "-f", "dshow",
+                    "-i", "audio=\"Stereo Mix (Realtek(R) Audio)\""
+                ])
         else:
             # Linux - detect display server and use appropriate capture
             import os
