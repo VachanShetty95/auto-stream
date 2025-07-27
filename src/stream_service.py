@@ -111,7 +111,8 @@ class StreamService:
                 quality=self.config.stream_quality,
                 framerate=self.config.stream_framerate,
                 bitrate=self.config.stream_bitrate,
-                use_desktop=use_desktop
+                use_desktop=use_desktop,
+                audio_device=self.config.audio_device
             )
             
             # Log the FFmpeg command
@@ -120,7 +121,7 @@ class StreamService:
             print(f"Starting stream...")
             self.logger.info(f"Starting stream with {'desktop' if use_desktop else 'game-specific'} capture")
             
-            # Start FFmpeg process
+            # Start FFmpeg process with fallback for audio device issues
             self.logger.info(f"Starting FFmpeg process with command: {' '.join(stream_cmd)}")
             
             process = subprocess.Popen(
@@ -137,8 +138,50 @@ class StreamService:
                 self.logger.error(f"FFmpeg process failed to start. Return code: {process.returncode}")
                 self.logger.error(f"FFmpeg stdout: {stdout}")
                 self.logger.error(f"FFmpeg stderr: {stderr}")
-                print(f"FFmpeg failed to start. Check logs for details.")
-                return False
+                
+                # Check if it's an audio device issue
+                if "Could not find audio only device" in stderr or "Error opening input" in stderr:
+                    self.logger.warning("Audio device issue detected. Trying without audio...")
+                    print("Audio device not found. Trying to stream without audio...")
+                    
+                    # Try again without audio
+                    stream_cmd_no_audio = []
+                    for i, arg in enumerate(stream_cmd):
+                        if arg == "-f" and i + 1 < len(stream_cmd) and stream_cmd[i + 1] == "dshow":
+                            # Skip the audio input section
+                            break
+                        stream_cmd_no_audio.append(arg)
+                    
+                    # Remove audio encoding settings too
+                    final_cmd = []
+                    skip_audio = False
+                    for arg in stream_cmd_no_audio:
+                        if arg in ["-c:a", "-b:a", "-ar"]:
+                            skip_audio = True
+                            continue
+                        if skip_audio and arg in ["aac", "128k", "44100"]:
+                            continue
+                        skip_audio = False
+                        final_cmd.append(arg)
+                    
+                    self.logger.info(f"Trying without audio: {' '.join(final_cmd)}")
+                    
+                    process = subprocess.Popen(
+                        final_cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True
+                    )
+                    
+                    if process.poll() is not None:
+                        stdout, stderr = process.communicate()
+                        self.logger.error(f"FFmpeg process still failed without audio. Return code: {process.returncode}")
+                        self.logger.error(f"FFmpeg stderr: {stderr}")
+                        print(f"FFmpeg failed to start even without audio. Check logs for details.")
+                        return False
+                else:
+                    print(f"FFmpeg failed to start. Check logs for details.")
+                    return False
             
             # Wait a moment to see if process starts successfully
             import time

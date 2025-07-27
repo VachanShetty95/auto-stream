@@ -31,6 +31,9 @@ class EnvConfig:
         # System
         self.ffmpeg_path = os.getenv('FFMPEG_PATH', '')
         self.auto_start = os.getenv('AUTO_START', 'true').lower() == 'true'
+        
+        # Audio device (Windows only)
+        self.audio_device = os.getenv('AUDIO_DEVICE', 'Stereo Mix (Realtek(R) Audio)')
     
     def validate(self) -> List[str]:
         """Validate configuration and return list of errors."""

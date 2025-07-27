@@ -173,7 +173,8 @@ Or download from: https://ffmpeg.org/download.html
         quality: str = "720p",
         framerate: int = 30,
         bitrate: str = "3000k",
-        use_desktop: bool = True
+        use_desktop: bool = True,
+        audio_device: str = "Stereo Mix (Realtek(R) Audio)"
     ) -> List[str]:
         """Generate FFmpeg command for streaming.
         
@@ -185,6 +186,7 @@ Or download from: https://ffmpeg.org/download.html
             framerate: Video framerate
             bitrate: Video bitrate
             use_desktop: If True, capture entire desktop; if False, try to capture specific window
+            audio_device: Audio device name for Windows capture
         """
         
         # Get the actual FFmpeg path (not mocked)
@@ -215,7 +217,7 @@ Or download from: https://ffmpeg.org/download.html
                     "-video_size", f"{settings['width']}x{settings['height']}",
                     "-i", "desktop",
                     "-f", "dshow",
-                    "-i", "audio=\"Stereo Mix (Realtek(R) Audio)\""
+                    "-i", f"audio=\"{audio_device}\""
                 ])
             else:
                 # Window-specific capture (less reliable)
@@ -225,7 +227,7 @@ Or download from: https://ffmpeg.org/download.html
                     "-video_size", f"{settings['width']}x{settings['height']}",
                     "-i", f"title={game_title}",
                     "-f", "dshow",
-                    "-i", "audio=\"Stereo Mix (Realtek(R) Audio)\""
+                    "-i", f"audio=\"{audio_device}\""
                 ])
         else:
             # Linux - detect display server and use appropriate capture
