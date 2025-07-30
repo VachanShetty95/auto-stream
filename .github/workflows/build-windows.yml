@@ -1,0 +1,109 @@
+name: Build Executables
+
+on:
+  push:
+    branches: [ main, github-actions-build ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            executable_name: auto-stream.exe
+            artifact_name: auto-stream-windows
+            path_separator: ";"
+          - os: ubuntu-latest  
+            executable_name: auto-stream
+            artifact_name: auto-stream-linux
+            path_separator: ":"
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Build executable
+      run: |
+        pyinstaller --onefile --console --name auto-stream --add-data "src${{ matrix.path_separator }}src" --hidden-import psutil --hidden-import requests --hidden-import discord --hidden-import dotenv main.py
+    
+    - name: Create distribution package
+      shell: bash
+      run: |
+        mkdir -p package
+        cp dist/${{ matrix.executable_name }} package/
+        cp .env.example package/
+        cp README.md package/
+        cp LICENSE package/
+        
+        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          echo "Auto-Stream Windows Executable" > package/SETUP.txt
+          echo "" >> package/SETUP.txt
+          echo "Quick Start:" >> package/SETUP.txt
+          echo "1. Copy .env.example to .env" >> package/SETUP.txt
+          echo "2. Edit .env with your settings:" >> package/SETUP.txt
+          echo "   - YOUTUBE_STREAM_KEY=your_key_here" >> package/SETUP.txt
+          echo "   - GAME_EXECUTABLE=YourGame.exe" >> package/SETUP.txt
+          echo "3. Double-click auto-stream.exe" >> package/SETUP.txt
+          echo "" >> package/SETUP.txt
+          echo "Requirements:" >> package/SETUP.txt
+          echo "- FFmpeg installed and in PATH" >> package/SETUP.txt
+          echo "- YouTube streaming enabled on your channel" >> package/SETUP.txt
+        else
+          echo "Auto-Stream Linux Executable" > package/SETUP.txt
+          echo "" >> package/SETUP.txt
+          echo "Quick Start:" >> package/SETUP.txt
+          echo "1. Copy .env.example to .env" >> package/SETUP.txt
+          echo "2. Edit .env with your settings:" >> package/SETUP.txt
+          echo "   - YOUTUBE_STREAM_KEY=your_key_here" >> package/SETUP.txt
+          echo "   - GAME_EXECUTABLE=your_game_binary" >> package/SETUP.txt
+          echo "3. Run ./auto-stream" >> package/SETUP.txt
+          echo "" >> package/SETUP.txt
+          echo "Requirements:" >> package/SETUP.txt
+          echo "- FFmpeg installed" >> package/SETUP.txt
+          echo "- Make executable: chmod +x auto-stream" >> package/SETUP.txt
+        fi
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: package/
+        retention-days: 30
+    
+    - name: Create Release Assets
+      if: github.event_name == 'release'
+      shell: bash
+      run: |
+        cd package
+        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          zip -r ../${{ matrix.artifact_name }}.zip .
+        else
+          tar -czf ../${{ matrix.artifact_name }}.tar.gz .
+        fi
+    
+    - name: Upload Release Assets
+      if: github.event_name == 'release'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ${{ matrix.artifact_name }}.${{ matrix.os == 'windows-latest' && 'zip' || 'tar.gz' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

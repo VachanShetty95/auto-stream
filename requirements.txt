@@ -1,0 +1,13 @@
+psutil>=5.9.0
+requests>=2.28.0
+discord.py>=2.3.0
+python-dotenv>=1.0.0
+
+# Windows-specific dependencies (optional)
+pywin32>=306; sys_platform == "win32"
+
+# Build dependencies
+pyinstaller>=5.0.0
+
+# For future GUI (when we add it)
+# PyQt5>=5.15.0 
